@@ -1,22 +1,22 @@
 # AHA Stack
 
-Baseline app: **Next.js 16** (App Router), **Tailwind CSS v4**, **Supabase** (Auth + Postgres + RLS), and **Stripe Checkout** with **verified webhooks**. Use it as a clean Git starting point for products that take payments.
+Baseline app: **[Astro](https://astro.build/)** (server output), **[HTMX](https://htmx.org/)**, **Tailwind CSS v4**, **Supabase** (Auth + Postgres + RLS), and **Stripe Checkout** with **verified webhooks**. The name matches **A**stro + **H**TMX + a server/API layer you extend (**A**PI routes).
 
 ## Quick start
 
 1. Copy environment template and fill in values:
 
    ```bash
-   cp .env.example .env.local
+   cp .env.example .env
    ```
 
-2. Create a Supabase project, then add **URL**, **anon key**, and (for webhooks writing to `payments`) **service role** key.
+2. Create a Supabase project; add **URL**, **anon key**, and (for webhook → `payments`) **service role** key.
 
-3. Run the SQL in `supabase/migrations/` in the Supabase SQL editor (or use the Supabase CLI with `supabase db push`).
+3. Run the SQL in `supabase/migrations/` in the Supabase SQL editor (or `supabase db push`).
 
-4. In Stripe: create a **Product** and **Price**, add **API keys** and (for production) a **webhook** endpoint pointing to  
+4. In Stripe: create a **Product** and **Price**, set **API keys**, and point a **webhook** to  
    `https://your-domain.com/api/webhooks/stripe`  
-   listening for `checkout.session.completed`.
+   for `checkout.session.completed`.
 
 5. Install and run:
 
@@ -25,26 +25,34 @@ Baseline app: **Next.js 16** (App Router), **Tailwind CSS v4**, **Supabase** (Au
    npm run dev
    ```
 
-6. In Supabase **Authentication → URL configuration**, set **Site URL** and **Redirect URLs** to match `NEXT_PUBLIC_SITE_URL` (e.g. `http://localhost:3000` and your production URL).
+6. Supabase **Authentication → URL configuration**: set **Site URL** and **Redirect URLs** to match `PUBLIC_SITE_URL` (e.g. `http://localhost:4321` and production).
 
 ## What you get
 
-- **Auth**: Magic-link sign-in (no passwords in this repo). Session refresh via middleware.
-- **Payments**: `POST /api/checkout` creates a Stripe Checkout Session for the signed-in user; success/cancel return to `/account`.
-- **Webhooks**: `POST /api/webhooks/stripe` verifies `Stripe-Signature` and (if `SUPABASE_SERVICE_ROLE_KEY` is set) upserts into `payments`.
-- **Database**: `profiles` (RLS) + trigger on `auth.users`; `payments` readable only by the owning user via RLS; writes from the app use the service role only in the webhook handler.
+- **Auth**: Magic-link sign-in; `exchangeCodeForSession` on `/auth/callback`; session refresh in Astro middleware.
+- **HTMX**: Login form posts to `/api/auth/login` and swaps the status HTML; checkout uses `HX-Redirect` to Stripe; logout uses `HX-Redirect` home.
+- **Payments**: `POST /api/checkout` creates a Checkout Session (JSON for non-HTMX clients, HTML / redirect for HTMX).
+- **Webhooks**: `POST /api/webhooks/stripe` verifies signatures and optionally upserts `payments` with the service role.
+- **Database**: Same migration as before — `profiles`, `payments`, RLS, auth trigger.
 
-## Security and PCI scope
+## Production
 
-- **Do not** send full card numbers or CVC through your server. This template uses **Stripe Checkout**, so card data stays on Stripe-hosted pages — typically **PCI SAQ A** style scope for your app (confirm with Stripe/your QSA).
-- **PayPal** via Stripe: enable **PayPal** under [Stripe Dashboard → Settings → Payment methods](https://dashboard.stripe.com/settings/payment_methods). Optional: set `payment_method_types` on the Checkout Session (e.g. `card`, `paypal`) once your account supports them.
-- Keep **`STRIPE_SECRET_KEY`**, **`STRIPE_WEBHOOK_SECRET`**, and **`SUPABASE_SERVICE_ROLE_KEY`** server-only; never prefix them with `NEXT_PUBLIC_`.
-- Rotate keys if leaked; use **live** vs **test** keys per environment.
-- The webhook handler uses the **raw request body** and `constructEvent` — required for signature verification.
+```bash
+npm run build
+npm run start
+```
 
-## Note on Next.js 16
+Uses the **Node** adapter (`standalone`). Deploy to any Node host, or adapt to your platform’s Astro adapter.
 
-The build may warn that the `middleware` convention is deprecated in favor of **proxy**. When you upgrade workflows, follow the [Next.js middleware → proxy migration](https://nextjs.org/docs/messages/middleware-to-proxy).
+## Security and PCI
+
+- Use **Stripe Checkout** so card data stays on Stripe (typically **SAQ A–style** scope for your app — confirm with Stripe/your QSA).
+- **PayPal** and other methods: enable them in the [Stripe Dashboard payment methods](https://dashboard.stripe.com/settings/payment_methods).
+- Never commit **`.env`**; keep `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, and `SUPABASE_SERVICE_ROLE_KEY` server-only (no `PUBLIC_` prefix).
+
+## Environment variables (migration from Next.js)
+
+If you had an older clone using `NEXT_PUBLIC_*`, rename to **`PUBLIC_*`** as in `.env.example` (`PUBLIC_SITE_URL`, `PUBLIC_SUPABASE_URL`, `PUBLIC_SUPABASE_ANON_KEY`, `PUBLIC_STRIPE_PUBLISHABLE_KEY`).
 
 ## License
 

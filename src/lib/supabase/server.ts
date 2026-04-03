@@ -1,25 +1,19 @@
+import type { AstroCookies } from "astro";
 import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
 
-export async function createClient() {
-  const cookieStore = await cookies();
-
+export function createServer(cookies: AstroCookies) {
   return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    import.meta.env.PUBLIC_SUPABASE_URL,
+    import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
     {
       cookies: {
         getAll() {
-          return cookieStore.getAll();
+          return cookies.getAll();
         },
         setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options),
-            );
-          } catch {
-            /* set from Server Component — middleware keeps session fresh */
-          }
+          cookiesToSet.forEach(({ name, value, options }) =>
+            cookies.set(name, value, options),
+          );
         },
       },
     },

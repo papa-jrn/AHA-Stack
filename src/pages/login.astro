@@ -1,0 +1,60 @@
+---
+import Layout from "../layouts/Layout.astro";
+
+const error = Astro.url.searchParams.get("error") === "auth";
+---
+
+<Layout title="Sign in · AHA Stack">
+  <div
+    class="flex min-h-full flex-1 flex-col items-center justify-center px-4 py-16"
+  >
+    <div class="w-full max-w-sm space-y-8">
+      <div class="text-center">
+        <h1 class="text-2xl font-semibold tracking-tight">Sign in</h1>
+        <p class="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+          Magic link via Supabase — no password stored in this app.
+        </p>
+      </div>
+      {
+        error ? (
+          <p class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-center text-sm text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200">
+            Sign-in failed. Try again or contact support.
+          </p>
+        ) : null
+      }
+      <form
+        class="space-y-4"
+        hx-post="/api/auth/login"
+        hx-target="#login-result"
+        hx-swap="innerHTML"
+      >
+        <div>
+          <label for="email" class="sr-only">Email</label>
+          <input
+            id="email"
+            name="email"
+            type="email"
+            required
+            autocomplete="email"
+            placeholder="you@example.com"
+            class="block w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-foreground shadow-sm placeholder:text-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:focus:border-zinc-400 dark:focus:ring-zinc-400"
+          />
+        </div>
+        <button
+          type="submit"
+          class="flex w-full justify-center rounded-lg bg-foreground px-3 py-2 text-sm font-medium text-background transition hover:opacity-90 htmx-request:opacity-50"
+        >
+          Email me a link
+        </button>
+      </form>
+      <div id="login-result"></div>
+      <p class="text-center text-sm text-zinc-500">
+        <a
+          href="/"
+          class="font-medium text-foreground underline-offset-4 hover:underline"
+          >Back to home</a
+        >
+      </p>
+    </div>
+  </div>
+</Layout>

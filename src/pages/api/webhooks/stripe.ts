@@ -1,24 +1,27 @@
-import { NextResponse } from "next/server";
+import type { APIRoute } from "astro";
 import { createClient } from "@supabase/supabase-js";
 import type Stripe from "stripe";
 import { getServiceRoleKey, getWebhookEnv } from "@/lib/env";
 import { getStripe } from "@/lib/stripe";
 
-export async function POST(request: Request) {
+export const POST: APIRoute = async ({ request }) => {
   let webhookSecret: string;
   try {
     webhookSecret = getWebhookEnv().STRIPE_WEBHOOK_SECRET;
   } catch {
-    return NextResponse.json(
-      { error: "Webhook not configured" },
-      { status: 503 },
-    );
+    return new Response(JSON.stringify({ error: "Webhook not configured" }), {
+      status: 503,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 
   const body = await request.text();
   const signature = request.headers.get("stripe-signature");
   if (!signature) {
-    return NextResponse.json({ error: "Missing signature" }, { status: 400 });
+    return new Response(JSON.stringify({ error: "Missing signature" }), {
+      status: 400,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 
   const stripe = getStripe();
@@ -26,14 +29,17 @@ export async function POST(request: Request) {
   try {
     event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
   } catch {
-    return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
+    return new Response(JSON.stringify({ error: "Invalid signature" }), {
+      status: 400,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 
   if (event.type === "checkout.session.completed") {
     const session = event.data.object as Stripe.Checkout.Session;
     const supabaseUserId = session.metadata?.supabase_user_id ?? null;
     const serviceKey = getServiceRoleKey();
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const url = import.meta.env.PUBLIC_SUPABASE_URL;
 
     if (serviceKey && url && supabaseUserId && session.id) {
       const admin = createClient(url, serviceKey);
@@ -52,5 +58,8 @@ export async function POST(request: Request) {
     }
   }
 
-  return NextResponse.json({ received: true });
-}
+  return new Response(JSON.stringify({ received: true }), {
+    status: 200,
+    headers: { "Content-Type": "application/json" },
+  });
+};
