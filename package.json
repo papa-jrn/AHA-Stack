@@ -16,6 +16,7 @@
     "@supabase/ssr": "^0.10.0",
     "@supabase/supabase-js": "^2.101.1",
     "astro": "^5.16.0",
+    "htmx.org": "^2.0.4",
     "stripe": "^22.0.0",
     "zod": "^4.3.6"
   },

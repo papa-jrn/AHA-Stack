@@ -66,40 +66,45 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     const lineItems = await stripe.checkout.sessions.listLineItems(session.id, {
-      limit: 10,
+      limit: 2,
     });
-    const matchedPrice = lineItems.data.some(
-      (item) => item.price?.id === expectedPriceId && item.quantity === 1,
-    );
-
-    if (!matchedPrice) {
+    if (
+      lineItems.data.length !== 1 ||
+      lineItems.data[0].price?.id !== expectedPriceId ||
+      lineItems.data[0].quantity !== 1
+    ) {
       return new Response(JSON.stringify({ error: "Unexpected checkout price" }), {
         status: 400,
         headers: { "Content-Type": "application/json" },
       });
     }
 
-    if (serviceKey && url) {
-      const admin = createClient(url, serviceKey);
-      const amountTotal = session.amount_total ?? 0;
-      const currency = session.currency ?? "usd";
-      const { error } = await admin.from("payments").upsert(
-        {
-          stripe_checkout_session_id: session.id,
-          supabase_user_id: supabaseUserId,
-          amount_total: amountTotal,
-          currency,
-          status: "complete",
-        },
-        { onConflict: "stripe_checkout_session_id" },
-      );
+    if (!serviceKey || !url) {
+      return new Response(JSON.stringify({ error: "Payment storage not configured" }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
 
-      if (error) {
-        return new Response(JSON.stringify({ error: "Could not store payment" }), {
-          status: 500,
-          headers: { "Content-Type": "application/json" },
-        });
-      }
+    const admin = createClient(url, serviceKey);
+    const amountTotal = session.amount_total ?? 0;
+    const currency = session.currency ?? "usd";
+    const { error } = await admin.from("payments").upsert(
+      {
+        stripe_checkout_session_id: session.id,
+        supabase_user_id: supabaseUserId,
+        amount_total: amountTotal,
+        currency,
+        status: "complete",
+      },
+      { onConflict: "stripe_checkout_session_id" },
+    );
+
+    if (error) {
+      return new Response(JSON.stringify({ error: "Could not store payment" }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      });
     }
   }
 
