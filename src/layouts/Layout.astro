@@ -20,10 +20,9 @@ const {
     <meta name="description" content={description} />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>{title}</title>
-    <script
-      is:inline
-      src="https://unpkg.com/htmx.org@2.0.4"
-      crossorigin="anonymous"></script>
+    <script>
+      import "htmx.org";
+    </script>
   </head>
   <body class="min-h-full flex flex-col font-sans">
     <slot />
