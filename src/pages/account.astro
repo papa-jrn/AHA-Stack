@@ -12,6 +12,26 @@ if (!user) {
 }
 
 const checkout = Astro.url.searchParams.get("checkout");
+const checkoutSessionId = Astro.url.searchParams.get("session_id");
+let checkoutMessage: { tone: "success" | "pending"; text: string } | null = null;
+
+if (checkout === "success" && checkoutSessionId) {
+  const { data: payment } = await supabase
+    .from("payments")
+    .select("stripe_checkout_session_id")
+    .eq("stripe_checkout_session_id", checkoutSessionId)
+    .maybeSingle();
+
+  checkoutMessage = payment
+    ? {
+        tone: "success",
+        text: "Payment completed and verified. Thank you.",
+      }
+    : {
+        tone: "pending",
+        text: "Payment is processing. Refresh in a moment if it does not appear yet.",
+      };
+}
 ---
 
 <Layout title="Account · AHA Stack">
@@ -24,9 +44,16 @@ const checkout = Astro.url.searchParams.get("checkout");
       <span class="font-medium text-foreground">{user.email}</span>
     </p>
     {
-      checkout === "success" ? (
+      checkoutMessage?.tone === "success" ? (
         <p class="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-100">
-          Payment completed. Thank you.
+          {checkoutMessage.text}
+        </p>
+      ) : null
+    }
+    {
+      checkoutMessage?.tone === "pending" ? (
+        <p class="mt-4 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-900 dark:border-sky-900 dark:bg-sky-950 dark:text-sky-100">
+          {checkoutMessage.text}
         </p>
       ) : null
     }

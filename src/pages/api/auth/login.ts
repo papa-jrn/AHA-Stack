@@ -1,8 +1,16 @@
 import type { APIRoute } from "astro";
 import { getPublicEnv } from "@/lib/env";
+import { isSameOriginRequest } from "@/lib/security";
 import { createServer } from "@/lib/supabase/server";
 
 export const POST: APIRoute = async ({ request, cookies }) => {
+  if (!isSameOriginRequest(request)) {
+    return new Response(
+      '<p class="text-sm text-red-600">Invalid request origin.</p>',
+      { status: 403, headers: { "Content-Type": "text/html; charset=utf-8" } },
+    );
+  }
+
   let siteUrl: string;
   try {
     siteUrl = getPublicEnv().PUBLIC_SITE_URL;

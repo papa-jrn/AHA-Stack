@@ -1,5 +1,6 @@
 import type { APIRoute } from "astro";
 import { getCheckoutEnv } from "@/lib/env";
+import { isSameOriginRequest } from "@/lib/security";
 import { createServer } from "@/lib/supabase/server";
 import { getStripe } from "@/lib/stripe";
 
@@ -18,6 +19,14 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       headers: { "Content-Type": "application/json" },
     });
   };
+
+  if (!isSameOriginRequest(request)) {
+    return fail(
+      '<p class="text-sm text-red-600">Invalid request origin.</p>',
+      { error: "Invalid request origin" },
+      403,
+    );
+  }
 
   let env: ReturnType<typeof getCheckoutEnv>;
   try {
@@ -49,7 +58,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     customer_email: user.email ?? undefined,
     client_reference_id: user.id,
     line_items: [{ price: env.STRIPE_PRICE_ID, quantity: 1 }],
-    success_url: `${env.PUBLIC_SITE_URL}/account?checkout=success`,
+    success_url: `${env.PUBLIC_SITE_URL}/account?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${env.PUBLIC_SITE_URL}/account?checkout=cancel`,
     metadata: { supabase_user_id: user.id },
   });
